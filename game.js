@@ -1,8 +1,33 @@
 // ---- Canvas Setup ----
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const W = canvas.width;
-const H = canvas.height;
+
+// Dynamic resize to fill the screen while keeping 2:3 aspect ratio
+function resizeCanvas() {
+  const aspect = 2 / 3;
+  let w = window.innerWidth;
+  let h = window.innerHeight;
+  if (w / h > aspect) {
+    w = Math.floor(h * aspect);
+  } else {
+    h = Math.floor(w / aspect);
+  }
+  canvas.width = w;
+  canvas.height = h;
+  const container = document.getElementById('game-container');
+  container.style.width = w + 'px';
+  container.style.height = h + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  W = canvas.width;
+  H = canvas.height;
+  C = getConstants();
+});
+
+let W = canvas.width;
+let H = canvas.height;
 
 // ---- UI Elements ----
 const startScreen = document.getElementById('start-screen');
@@ -11,17 +36,26 @@ const finalScoreEl = document.getElementById('final-score');
 const bestScoreEl = document.getElementById('best-score');
 const restartBtn = document.getElementById('restart-btn');
 
-// ---- Game Constants ----
-const GRAVITY = 0.28;
-const FLAP_FORCE = -5.2;
-const MAX_FALL_SPEED = 8;
-const PIPE_WIDTH = 60;
-const PIPE_GAP = 130;
-const PIPE_SPEED = 2.5;
-const PIPE_SPAWN_INTERVAL = 90; // frames
-const GROUND_HEIGHT = 80;
-const BIRD_X = 80;
-const BIRD_RADIUS = 15;
+// ---- Game Constants (scaled to screen) ----
+// Base values tuned to match original Flappy Bird at 512px height
+const BASE_H = 512;
+function s(val) { return val * (H / BASE_H); }
+
+function getConstants() {
+  return {
+    GRAVITY: s(0.22),
+    FLAP_FORCE: s(-5.0),
+    MAX_FALL_SPEED: s(7),
+    PIPE_WIDTH: s(52),
+    PIPE_GAP: s(110),
+    PIPE_SPEED: s(2.2),
+    PIPE_SPAWN_INTERVAL: 90,
+    GROUND_HEIGHT: s(70),
+    BIRD_X: s(70),
+    BIRD_RADIUS: s(13),
+  };
+}
+let C = getConstants();
 
 // ---- Colors ----
 const COLORS = {
@@ -74,7 +108,7 @@ function resetGame() {
 // ---- Bird Drawing ----
 function drawBird() {
   ctx.save();
-  ctx.translate(BIRD_X, bird.y);
+  ctx.translate(C.BIRD_X, bird.y);
 
   // Rotation based on velocity
   const targetRot = Math.min(bird.vy * 3, 70);
@@ -84,7 +118,7 @@ function drawBird() {
   // Body
   ctx.fillStyle = COLORS.bird;
   ctx.beginPath();
-  ctx.ellipse(0, 0, BIRD_RADIUS + 2, BIRD_RADIUS, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, C.BIRD_RADIUS + 2, C.BIRD_RADIUS, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = COLORS.birdDark;
   ctx.lineWidth = 1.5;
@@ -134,35 +168,35 @@ function drawPipe(pipe) {
 
   // Top pipe body
   ctx.fillStyle = COLORS.pipeBody;
-  ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topH);
+  ctx.fillRect(pipe.x, 0, C.PIPE_WIDTH, pipe.topH);
   ctx.strokeStyle = COLORS.pipeBorder;
   ctx.lineWidth = 2;
-  ctx.strokeRect(pipe.x, 0, PIPE_WIDTH, pipe.topH);
+  ctx.strokeRect(pipe.x, 0, C.PIPE_WIDTH, pipe.topH);
 
   // Top pipe cap
   ctx.fillStyle = COLORS.pipeCapTop;
-  ctx.fillRect(pipe.x - capOverhang, pipe.topH - capH, PIPE_WIDTH + capOverhang * 2, capH);
+  ctx.fillRect(pipe.x - capOverhang, pipe.topH - capH, C.PIPE_WIDTH + capOverhang * 2, capH);
   ctx.strokeStyle = COLORS.pipeBorder;
-  ctx.strokeRect(pipe.x - capOverhang, pipe.topH - capH, PIPE_WIDTH + capOverhang * 2, capH);
+  ctx.strokeRect(pipe.x - capOverhang, pipe.topH - capH, C.PIPE_WIDTH + capOverhang * 2, capH);
 
   // Pipe highlight (top)
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fillRect(pipe.x + 6, 0, 8, pipe.topH - capH);
 
   // Bottom pipe body
-  const bottomY = pipe.topH + PIPE_GAP;
-  const bottomH = H - bottomY - GROUND_HEIGHT;
+  const bottomY = pipe.topH + C.PIPE_GAP;
+  const bottomH = H - bottomY - C.GROUND_HEIGHT;
   ctx.fillStyle = COLORS.pipeBody;
-  ctx.fillRect(pipe.x, bottomY, PIPE_WIDTH, bottomH);
+  ctx.fillRect(pipe.x, bottomY, C.PIPE_WIDTH, bottomH);
   ctx.strokeStyle = COLORS.pipeBorder;
   ctx.lineWidth = 2;
-  ctx.strokeRect(pipe.x, bottomY, PIPE_WIDTH, bottomH);
+  ctx.strokeRect(pipe.x, bottomY, C.PIPE_WIDTH, bottomH);
 
   // Bottom pipe cap
   ctx.fillStyle = COLORS.pipeCapTop;
-  ctx.fillRect(pipe.x - capOverhang, bottomY, PIPE_WIDTH + capOverhang * 2, capH);
+  ctx.fillRect(pipe.x - capOverhang, bottomY, C.PIPE_WIDTH + capOverhang * 2, capH);
   ctx.strokeStyle = COLORS.pipeBorder;
-  ctx.strokeRect(pipe.x - capOverhang, bottomY, PIPE_WIDTH + capOverhang * 2, capH);
+  ctx.strokeRect(pipe.x - capOverhang, bottomY, C.PIPE_WIDTH + capOverhang * 2, capH);
 
   // Pipe highlight (bottom)
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
@@ -172,17 +206,17 @@ function drawPipe(pipe) {
 // ---- Background Drawing ----
 function drawBackground() {
   // Sky gradient
-  const grad = ctx.createLinearGradient(0, 0, 0, H - GROUND_HEIGHT);
+  const grad = ctx.createLinearGradient(0, 0, 0, H - C.GROUND_HEIGHT);
   grad.addColorStop(0, COLORS.sky);
   grad.addColorStop(1, COLORS.skyGradient);
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H - GROUND_HEIGHT);
+  ctx.fillRect(0, 0, W, H - C.GROUND_HEIGHT);
 
   // Clouds
-  drawCloud(50, 80, 0.8);
-  drawCloud(200, 150, 0.6);
-  drawCloud(320, 60, 0.5);
-  drawCloud(150, 200, 0.7);
+  drawCloud(W * 0.12, H * 0.15, 0.8);
+  drawCloud(W * 0.5, H * 0.28, 0.6);
+  drawCloud(W * 0.8, H * 0.11, 0.5);
+  drawCloud(W * 0.37, H * 0.37, 0.7);
 }
 
 function drawCloud(x, y, scale) {
@@ -204,17 +238,17 @@ function drawCloud(x, y, scale) {
 function drawGround() {
   // Ground body
   ctx.fillStyle = COLORS.ground;
-  ctx.fillRect(0, H - GROUND_HEIGHT, W, GROUND_HEIGHT);
+  ctx.fillRect(0, H - C.GROUND_HEIGHT, W, C.GROUND_HEIGHT);
 
   // Ground top line
   ctx.fillStyle = COLORS.groundDark;
-  ctx.fillRect(0, H - GROUND_HEIGHT, W, 4);
+  ctx.fillRect(0, H - C.GROUND_HEIGHT, W, 4);
 
   // Ground stripes
   ctx.fillStyle = COLORS.groundStripe;
   const stripeW = 30;
   for (let x = -groundOffset % (stripeW * 2); x < W; x += stripeW * 2) {
-    ctx.fillRect(x, H - GROUND_HEIGHT + 4, stripeW, 12);
+    ctx.fillRect(x, H - C.GROUND_HEIGHT + 4, stripeW, 12);
   }
 }
 
@@ -233,16 +267,16 @@ function drawScore() {
 // ---- Collision Detection ----
 function checkCollision() {
   // Ground / ceiling
-  if (bird.y + BIRD_RADIUS > H - GROUND_HEIGHT || bird.y - BIRD_RADIUS < 0) {
+  if (bird.y + C.BIRD_RADIUS > H - C.GROUND_HEIGHT || bird.y - C.BIRD_RADIUS < 0) {
     return true;
   }
 
   // Pipes
   for (const pipe of pipes) {
-    const withinX = BIRD_X + BIRD_RADIUS > pipe.x && BIRD_X - BIRD_RADIUS < pipe.x + PIPE_WIDTH;
+    const withinX = C.BIRD_X + C.BIRD_RADIUS > pipe.x && C.BIRD_X - C.BIRD_RADIUS < pipe.x + C.PIPE_WIDTH;
     if (withinX) {
-      const hitTop = bird.y - BIRD_RADIUS < pipe.topH;
-      const hitBottom = bird.y + BIRD_RADIUS > pipe.topH + PIPE_GAP;
+      const hitTop = bird.y - C.BIRD_RADIUS < pipe.topH;
+      const hitBottom = bird.y + C.BIRD_RADIUS > pipe.topH + C.PIPE_GAP;
       if (hitTop || hitBottom) {
         return true;
       }
@@ -261,7 +295,7 @@ function flap() {
   }
 
   if (gameState === 'playing') {
-    bird.vy = FLAP_FORCE;
+    bird.vy = C.FLAP_FORCE;
     bird.flapFrame = 0;
   }
 }
@@ -270,35 +304,35 @@ function update() {
   if (gameState !== 'playing') return;
 
   // Bird physics
-  bird.vy += GRAVITY;
-  if (bird.vy > MAX_FALL_SPEED) bird.vy = MAX_FALL_SPEED;
+  bird.vy += C.GRAVITY;
+  if (bird.vy > C.MAX_FALL_SPEED) bird.vy = C.MAX_FALL_SPEED;
   bird.y += bird.vy;
   bird.flapFrame++;
 
   // Ground scroll
-  groundOffset += PIPE_SPEED;
+  groundOffset += C.PIPE_SPEED;
 
   // Spawn pipes
   frameCount++;
-  if (frameCount % PIPE_SPAWN_INTERVAL === 0) {
-    const minTop = 60;
-    const maxTop = H - GROUND_HEIGHT - PIPE_GAP - 60;
+  if (frameCount % C.PIPE_SPAWN_INTERVAL === 0) {
+    const minTop = s(60);
+    const maxTop = H - C.GROUND_HEIGHT - C.PIPE_GAP - s(60);
     const topH = Math.random() * (maxTop - minTop) + minTop;
     pipes.push({ x: W, topH: topH, scored: false });
   }
 
   // Move pipes and score
   for (let i = pipes.length - 1; i >= 0; i--) {
-    pipes[i].x -= PIPE_SPEED;
+    pipes[i].x -= C.PIPE_SPEED;
 
     // Score when bird passes pipe
-    if (!pipes[i].scored && pipes[i].x + PIPE_WIDTH < BIRD_X) {
+    if (!pipes[i].scored && pipes[i].x + C.PIPE_WIDTH < C.BIRD_X) {
       pipes[i].scored = true;
       score++;
     }
 
     // Remove off-screen pipes
-    if (pipes[i].x + PIPE_WIDTH + 10 < 0) {
+    if (pipes[i].x + C.PIPE_WIDTH + 10 < 0) {
       pipes.splice(i, 1);
     }
   }
