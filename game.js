@@ -12,11 +12,10 @@ const bestScoreEl = document.getElementById('best-score');
 const restartBtn = document.getElementById('restart-btn');
 
 // ---- Game Constants ----
-const GRAVITY = 0.28;
-const FLAP_FORCE = -5.2;
-const MAX_FALL_SPEED = 8;
+const GRAVITY = 0.45;
+const FLAP_FORCE = -7.5;
 const PIPE_WIDTH = 60;
-const PIPE_GAP = 130;
+const PIPE_GAP = 150;
 const PIPE_SPEED = 2.5;
 const PIPE_SPAWN_INTERVAL = 90; // frames
 const GROUND_HEIGHT = 80;
@@ -271,7 +270,6 @@ function update() {
 
   // Bird physics
   bird.vy += GRAVITY;
-  if (bird.vy > MAX_FALL_SPEED) bird.vy = MAX_FALL_SPEED;
   bird.y += bird.vy;
   bird.flapFrame++;
 
